@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CaloLog</title>
+<meta name="theme-color" content="#B9843F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CaloLog">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #FAF9F6; }
+  body {
+    color: #232320; font-family: 'Inter', sans-serif;
+    padding-bottom: 100px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 10px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; letter-spacing: .04em; font-size: 20px; text-transform: uppercase; }
+  .brand span { color: #B9843F; }
+  .icon-btn {
+    background: #FFFFFF; border: 1px solid #E5E3DD; border-radius: 10px;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    color: #56534C; cursor: pointer;
+  }
+  .view-switch { display: flex; gap: 8px; padding: 0 20px 10px; }
+  .vtab {
+    background: none; border: none; color: #A8A49C; font-family: 'Oswald', sans-serif;
+    text-transform: uppercase; font-size: 12px; letter-spacing: .05em;
+    padding: 6px 2px; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .vtab.active { color: #232320; border-bottom-color: #B9843F; }
+  .date-nav {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 4px 20px 18px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: #8B8880; text-transform: capitalize;
+  }
+  .date-nav button { background: none; border: none; color: #8B8880; cursor: pointer; display: flex; align-items: center; }
+  .date-nav .cur { color: #232320; min-width: 150px; text-align: center; }
+  .dashboard { display: flex; flex-direction: column; align-items: center; padding: 10px 20px 24px; }
+  .ring-num { font-family: 'Oswald', sans-serif; font-size: 34px; fill: #232320; font-weight: 600; }
+  .ring-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; fill: #8B8880; }
+  .macros-panel { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+  .macro-bar-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+  .macro-label { color: #8B8880; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+  .macro-values { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .macro-target { color: #A8A49C; font-weight: 400; }
+  .macro-track { height: 8px; background: #EDEBE4; border-radius: 5px; overflow: hidden; }
+  .macro-fill { height: 100%; border-radius: 5px; transition: width .5s ease; }
+  .section-title { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .06em; font-size: 13px; color: #8B8880; padding: 0 20px; margin: 22px 0 10px; }
+  .entry-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+  .entry-row {
+    background: #FFFFFF; border: 1px solid #E5E3DD; border-radius: 12px; padding: 12px 14px;
+    display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(60,56,48,.04);
+  }
+  .entry-name { font-weight: 500; font-size: 14px; }
+  .entry-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8B8880; margin-top: 3px; }
+  .entry-cal { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #B9843F; margin-right: 10px; }
+  .entry-actions { display: flex; align-items: center; }
+  .del-btn { background: none; border: none; color: #A8A49C; cursor: pointer; padding: 4px; font-size: 16px; }
+  .empty-state { text-align: center; color: #A8A49C; font-size: 13px; padding: 40px 20px; }
+  .fab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(180deg, transparent, #FAF9F6 35%); padding: 22px 20px 20px; display: flex; justify-content: center; }
+  .fab {
+    background: #B9843F; color: #FFFFFF; border: none; border-radius: 999px; padding: 14px 26px;
+    font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(185,132,63,.25);
+  }
+  .panel-overlay { position: fixed; inset: 0; background: rgba(60,56,48,.35); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
+  .panel { background: #FFFFFF; border: 1px solid #E5E3DD; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; padding: 20px 20px 30px; box-shadow: 0 -8px 30px rgba(60,56,48,.12); }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .panel-head h2 { font-family: 'Oswald', sans-serif; font-size: 17px; text-transform: uppercase; letter-spacing: .03em; margin: 0; }
+  .tabbar { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab { background: #F5F3EE; border: 1px solid #E1DED6; color: #8B8880; border-radius: 10px; padding: 9px 8px; font-size: 12.5px; cursor: pointer; text-align: center; flex: 1; }
+  .tab.active { color: #FFFFFF; background: #B9843F; border-color: #B9843F; font-weight: 600; }
+  .btn-secondary { background: #FFFFFF; color: #B9843F; border: 1px solid #B9843F; border-radius: 10px; padding: 13px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; }
+  .btn-icon-primary { background: #B9843F; color: #FFFFFF; border: none; border-radius: 10px; width: 46px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+  .fav-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #56534C; padding: 2px 2px; }
+  .fav-check input { width: 15px; height: 15px; }
+  .estimate-note { font-size: 11px; color: #A8A49C; font-style: italic; margin-bottom: 8px; }
+  .chat-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .chat-messages { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; padding: 2px; }
+  .msg { max-width: 85%; border-radius: 12px; padding: 9px 12px; font-size: 13px; line-height: 1.4; }
+  .msg-user { align-self: flex-end; background: #B9843F; color: #FFFFFF; }
+  .msg-model { align-self: flex-start; background: #F5F3EE; border: 1px solid #E5E3DD; color: #232320; }
+  .msg-img { max-width: 140px; border-radius: 8px; display: block; margin-bottom: 6px; }
+  .msg-text { white-space: pre-wrap; }
+  .chat-photo-preview { position: relative; width: 64px; }
+  .chat-photo-preview img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid #E5E3DD; }
+  .chat-photo-preview button { position: absolute; top: -6px; right: -6px; background: #232320; color: #FFFFFF; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; }
+  .chat-input-row { display: flex; gap: 8px; align-items: center; }
+  .chat-input-row .field { flex: 1; }
+  .subtab { background: none; border: 1px solid #E1DED6; color: #8B8880; border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; }
+  .subtab.active { background: #232320; color: #FFFFFF; border-color: #232320; }
+  .form-grid { display: flex; flex-direction: column; gap: 10px; }
+  .field-row { display: flex; gap: 10px; }
+  .field { background: #F5F3EE; border: 1px solid #E1DED6; border-radius: 10px; padding: 12px 14px; color: #232320; font-size: 14px; width: 100%; font-family: 'Inter', sans-serif; }
+  .field:focus { outline: none; border-color: #B9843F; }
+  .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #8B8880; margin-top: 6px; }
+  .field-help { font-size: 11px; color: #A8A49C; margin-top: -4px; }
+  .field-help a { color: #B9843F; }
+  .btn-primary { background: #B9843F; color: #FFFFFF; border: none; border-radius: 10px; padding: 13px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; }
+  .error-banner { background: rgba(176,104,104,.08); border: 1px solid rgba(176,104,104,.3); color: #A65454; font-size: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .upload-zone { background: #F5F3EE; border: 1.5px dashed #D6D3CB; border-radius: 14px; padding: 26px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #8B8880; font-size: 13px; cursor: pointer; width: 100%; }
+  .preview-img { max-width: 100%; max-height: 200px; border-radius: 10px; object-fit: cover; }
+  .loading-line { display: flex; align-items: center; gap: 8px; color: #8B8880; font-size: 13px; padding: 6px 0; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-card { background: #F5F3EE; border: 1px solid #E5E3DD; border-radius: 12px; padding: 14px; margin-top: 4px; }
+  .result-title { font-weight: 600; margin-bottom: 6px; }
+  .result-macros { display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #56534C; margin-bottom: 8px; }
+  .history-wrap { padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .chart-card { background: #FFFFFF; border: 1px solid #E5E3DD; border-radius: 14px; padding: 14px 12px; box-shadow: 0 1px 3px rgba(60,56,48,.05); }
+  .chart-title { font-size: 12px; color: #8B8880; text-transform: uppercase; letter-spacing: .05em; padding: 0 4px 8px; }
+  .day-list { display: flex; flex-direction: column; gap: 6px; }
+  .day-row { display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid #E5E3DD; border-radius: 10px; padding: 10px 14px; font-size: 12px; box-shadow: 0 1px 2px rgba(60,56,48,.04); }
+  .day-date { color: #56534C; text-transform: capitalize; }
+  .day-cal { font-family: 'JetBrains Mono', monospace; color: #B9843F; font-weight: 600; }
+  .day-macros { font-family: 'JetBrains Mono', monospace; color: #8B8880; }
+  .sync-badge { font-size: 10px; color: #3E8E89; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ---------- storage helpers (localStorage) ----------
+const ENTRY_PREFIX = 'calolog_entries_';
+const SETTINGS_KEY = 'calolog_settings';
+const DEFAULT_TARGETS = { calories: 2800, protein: 180, carbs: 320, fat: 80 };
+
+function todayKey(d = new Date()) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function fmtDateLabel(key) {
+  const [y,m,d] = key.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
+}
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? { ...DEFAULT_TARGETS, geminiKey:'', sheetUrl:'', ...JSON.parse(raw) } : { ...DEFAULT_TARGETS, geminiKey:'', sheetUrl:'' };
+  } catch(e) { return { ...DEFAULT_TARGETS, geminiKey:'', sheetUrl:'' }; }
+}
+function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+function loadDay(key) {
+  try { const raw = localStorage.getItem(ENTRY_PREFIX+key); return raw ? JSON.parse(raw) : []; }
+  catch(e) { return []; }
+}
+function saveDay(key, entries) { localStorage.setItem(ENTRY_PREFIX+key, JSON.stringify(entries)); }
+function listDayKeys() {
+  const keys = [];
+  for (let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if (k && k.startsWith(ENTRY_PREFIX)) keys.push(k.replace(ENTRY_PREFIX,''));
+  }
+  return keys.sort();
+}
+const FAVORITES_KEY = 'calolog_favorites';
+function loadFavorites() {
+  try { const raw = localStorage.getItem(FAVORITES_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e) { return []; }
+}
+function saveFavorites(favs) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); }
+
+// ---------- Google Sheet sync (fire-and-forget via Apps Script webhook) ----------
+function syncToSheet(dateKey, entry) {
+  if (!state.settings.sheetUrl) return;
+  const payload = {
+    date: dateKey, name: entry.name, calories: entry.calories, protein: entry.protein,
+    carbs: entry.carbs, fat: entry.fat, method: entry.method, timestamp: entry.ts
+  };
+  fetch(state.settings.sheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) }).catch(()=>{});
+}
+
+// ---------- Gemini vision call ----------
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = () => reject(new Error('Lecture fichier échouée'));
+    r.readAsDataURL(file);
+  });
+}
+
+// ---------- Gemini multi-turn chat (photo optionnelle, texte optionnel) ----------
+const CHAT_SYSTEM_PROMPT = `Tu es un assistant nutritionnel qui aide l'utilisateur à estimer les calories et macros d'un aliment ou repas, par conversation.
+L'utilisateur peut t'envoyer du texte seul, une photo seule (plat ou étiquette nutritionnelle), ou les deux.
+Discute normalement, pose des questions si des précisions utiles manquent (quantité, ingrédients, mode de cuisson, marque).
+Dès que tu as une estimation raisonnable (même approximative), termine ta réponse par un bloc sur sa propre ligne, à la toute fin, au format EXACT suivant, sans rien autour :
+ESTIMATION_JSON: {"name": string, "calories": number, "protein": number, "carbs": number, "fat": number}
+N'inclus ce bloc que lorsque tu proposes vraiment une estimation prête à être enregistrée. Sinon continue la conversation normalement, sans ce bloc.`;
+
+async function callGeminiChat(contents) {
+  const key = state.settings.geminiKey;
+  if (!key) throw new Error('Ajoute ta clé API Gemini dans les réglages (icône engrenage).');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+  const body = { contents, system_instruction: { parts: [{ text: CHAT_SYSTEM_PROMPT }] }, generationConfig: { temperature: 0.4 } };
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || 'Erreur Gemini');
+  return (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n');
+}
+function extractEstimate(text) {
+  const m = text.match(/ESTIMATION_JSON:\s*(\{[\s\S]*?\})\s*$/);
+  if (!m) return { display: text.trim(), estimate: null };
+  let json = null;
+  try { json = JSON.parse(m[1]); } catch (e) {}
+  return { display: text.slice(0, m.index).trim(), estimate: json };
+}
+
+// ---------- app state ----------
+const state = {
+  view: 'today',
+  dateKey: todayKey(),
+  entries: [],
+  settings: loadSettings(),
+  favorites: loadFavorites(),
+  modal: null, // 'add' | 'settings'
+  add: { mode: 'manual', saveFav: false,
+         manual: { name:'', calories:'', protein:'', carbs:'', fat:'', saveFav: false },
+         chat: { messages: [], input: '', imgB64: null, imgData: null, mediaType: null, loading: false, error: '', pendingEstimate: null } },
+};
+state.entries = loadDay(state.dateKey);
+
+function resetAddState() {
+  state.add = { mode: 'manual', saveFav: false,
+                manual: { name:'', calories:'', protein:'', carbs:'', fat:'', saveFav: false },
+                chat: { messages: [], input: '', imgB64: null, imgData: null, mediaType: null, loading: false, error: '', pendingEstimate: null } };
+}
+function addFavorite(item) {
+  const fav = { id: `${Date.now()}`, name: item.name, calories: Number(item.calories)||0, protein: Number(item.protein)||0, carbs: Number(item.carbs)||0, fat: Number(item.fat)||0 };
+  state.favorites.push(fav);
+  saveFavorites(state.favorites);
+}
+function removeFavorite(id) {
+  state.favorites = state.favorites.filter(f => f.id !== id);
+  saveFavorites(state.favorites);
+  render();
+}
+
+function totals() {
+  return state.entries.reduce((acc, e) => ({
+    calories: acc.calories + (Number(e.calories)||0),
+    protein: acc.protein + (Number(e.protein)||0),
+    carbs: acc.carbs + (Number(e.carbs)||0),
+    fat: acc.fat + (Number(e.fat)||0),
+  }), { calories:0, protein:0, carbs:0, fat:0 });
+}
+
+function shiftDay(delta) {
+  const [y,m,d] = state.dateKey.split('-').map(Number);
+  state.dateKey = todayKey(new Date(y, m-1, d+delta));
+  state.entries = loadDay(state.dateKey);
+  render();
+}
+
+function addEntry(entry) {
+  const full = { ...entry, id: `${Date.now()}`, ts: new Date().toISOString() };
+  state.entries.push(full);
+  saveDay(state.dateKey, state.entries);
+  syncToSheet(state.dateKey, full);
+  state.modal = null;
+  resetAddState();
+  render();
+}
+function removeEntry(id) {
+  state.entries = state.entries.filter(e => e.id !== id);
+  saveDay(state.dateKey, state.entries);
+  render();
+}
+
+// ---------- rendering ----------
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function ringSvg(value, target) {
+  const pct = target > 0 ? Math.min(1, value/target) : 0;
+  const r = 74, c = 2*Math.PI*r;
+  const over = value > target;
+  return `<svg width="180" height="180" viewBox="0 0 180 180">
+    <circle cx="90" cy="90" r="${r}" fill="none" stroke="#E7E5DF" stroke-width="14" />
+    <circle cx="90" cy="90" r="${r}" fill="none" stroke="${over?'#B06868':'#B9843F'}" stroke-width="14"
+      stroke-dasharray="${c}" stroke-dashoffset="${c - pct*c}" stroke-linecap="round" transform="rotate(-90 90 90)"
+      style="transition: stroke-dashoffset .6s ease" />
+    <text x="90" y="82" text-anchor="middle" class="ring-num">${Math.round(value)}</text>
+    <text x="90" y="106" text-anchor="middle" class="ring-sub">/ ${target} kcal</text>
+  </svg>`;
+}
+function macroBar(label, value, target, color) {
+  const pct = target > 0 ? Math.min(100, (value/target)*100) : 0;
+  return `<div>
+    <div class="macro-bar-head">
+      <span class="macro-label">${label}</span>
+      <span class="macro-values"><span style="color:${color}">${Math.round(value)}</span><span class="macro-target"> / ${target}g</span></span>
+    </div>
+    <div class="macro-track"><div class="macro-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+function renderToday() {
+  const t = totals();
+  const isToday = state.dateKey === todayKey();
+  const entriesHtml = state.entries.length === 0
+    ? `<div class="empty-state">Rien d'ajouté pour l'instant. Touche le bouton en bas pour commencer.</div>`
+    : `<div class="entry-list">${state.entries.slice().reverse().map(e => `
+        <div class="entry-row">
+          <div>
+            <div class="entry-name">${esc(e.name)}</div>
+            <div class="entry-meta">P${Math.round(e.protein)} · G${Math.round(e.carbs)} · L${Math.round(e.fat)}</div>
+          </div>
+          <div class="entry-actions">
+            <span class="entry-cal">${Math.round(e.calories)} kcal</span>
+            <button class="del-btn" data-action="delete" data-id="${e.id}">✕</button>
+          </div>
+        </div>`).join('')}</div>`;
+
+  return `
+    <div class="date-nav">
+      <button data-action="prev-day">‹</button>
+      <span class="cur">${isToday ? "Aujourd'hui" : fmtDateLabel(state.dateKey)}</span>
+      <button data-action="next-day" style="opacity:${isToday?0.3:1}" ${isToday?'disabled':''}>›</button>
+    </div>
+    <div class="dashboard">
+      ${ringSvg(t.calories, state.settings.calories)}
+      <div class="macros-panel">
+        ${macroBar('Protéines', t.protein, state.settings.protein, '#3E8E89')}
+        ${macroBar('Glucides', t.carbs, state.settings.carbs, '#B9843F')}
+        ${macroBar('Lipides', t.fat, state.settings.fat, '#B06868')}
+      </div>
+    </div>
+    <div class="section-title">Repas du jour</div>
+    ${entriesHtml}
+    <div class="fab-bar"><button class="fab" data-action="open-add">+ Ajouter un aliment</button></div>
+  `;
+}
+
+function renderHistory() {
+  const keys = listDayKeys().slice(-30);
+  if (keys.length === 0) return `<div class="empty-state">Pas encore d'historique. Ajoute des repas pour voir tes tendances ici.</div>`;
+  const days = keys.map(k => {
+    const es = loadDay(k);
+    const tt = es.reduce((acc,e)=>({calories:acc.calories+(Number(e.calories)||0),protein:acc.protein+(Number(e.protein)||0),carbs:acc.carbs+(Number(e.carbs)||0),fat:acc.fat+(Number(e.fat)||0)}),{calories:0,protein:0,carbs:0,fat:0});
+    return { date:k, ...tt };
+  });
+  const w = 320, h = 120, pad = 10;
+  const maxCal = Math.max(...days.map(d=>d.calories), state.settings.calories, 1);
+  const stepX = days.length > 1 ? (w - pad*2) / (days.length - 1) : 0;
+  const pts = days.map((d,i) => {
+    const x = pad + i*stepX;
+    const y = h - pad - (d.calories/maxCal)*(h-pad*2);
+    return `${x},${y}`;
+  }).join(' ');
+  const chart = `<svg width="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="#B9843F" stroke-width="2" />
+    ${days.map((d,i)=>{const x=pad+i*stepX;const y=h-pad-(d.calories/maxCal)*(h-pad*2);return `<circle cx="${x}" cy="${y}" r="2.5" fill="#B9843F" />`}).join('')}
+  </svg>`;
+  return `
+    <div class="history-wrap">
+      <div class="chart-card"><div class="chart-title">Calories — 30 derniers jours actifs</div>${chart}</div>
+      <div class="day-list">${days.slice().reverse().map(d => `
+        <div class="day-row">
+          <span class="day-date">${fmtDateLabel(d.date)}</span>
+          <span class="day-cal">${Math.round(d.calories)} kcal</span>
+          <span class="day-macros">P${Math.round(d.protein)} G${Math.round(d.carbs)} L${Math.round(d.fat)}</span>
+        </div>`).join('')}</div>
+    </div>
+  `;
+}
+
+function renderAddPanel() {
+  const a = state.add;
+  const tabs = `<div class="tabbar">
+    <button class="tab ${a.mode==='manual'?'active':''}" data-action="set-mode" data-mode="manual">✎ Manuel</button>
+    <button class="tab ${a.mode==='chat'?'active':''}" data-action="set-mode" data-mode="chat">💬 Chat IA</button>
+    <button class="tab ${a.mode==='favorites'?'active':''}" data-action="set-mode" data-mode="favorites">★ Favoris</button>
+  </div>`;
+
+  let body = '';
+  if (a.mode === 'manual') {
+    const m = a.manual;
+    body = `
+      <div class="form-grid">
+        <input class="field" id="f-name" placeholder="Nom de l'aliment" value="${esc(m.name)}">
+        <div class="field-row">
+          <input class="field" id="f-cal" type="number" placeholder="kcal" value="${esc(m.calories)}">
+          <input class="field" id="f-prot" type="number" placeholder="protéines (g)" value="${esc(m.protein)}">
+        </div>
+        <div class="field-row">
+          <input class="field" id="f-carb" type="number" placeholder="glucides (g)" value="${esc(m.carbs)}">
+          <input class="field" id="f-fat" type="number" placeholder="lipides (g)" value="${esc(m.fat)}">
+        </div>
+        <label class="fav-check"><input type="checkbox" id="f-savefav" ${m.saveFav?'checked':''}> Enregistrer aussi comme favori</label>
+        <button class="btn-primary" data-action="submit-manual">Ajouter</button>
+      </div>`;
+  } else if (a.mode === 'chat') {
+    const c = a.chat;
+    const messagesHtml = c.messages.map(m => `
+      <div class="msg ${m.role==='user'?'msg-user':'msg-model'}">
+        ${m.imgData ? `<img src="${m.imgData}" class="msg-img">` : ''}
+        ${m.text ? `<div class="msg-text">${esc(m.text)}</div>` : ''}
+      </div>`).join('');
+    const loading = c.loading ? `<div class="loading-line"><span class="spin">⏳</span> Gemini réfléchit…</div>` : '';
+    const estimateCard = c.pendingEstimate ? `
+      <div class="result-card">
+        <div class="result-title">${esc(c.pendingEstimate.name)}</div>
+        <div class="result-macros">
+          <span>${Math.round(c.pendingEstimate.calories)} kcal</span>
+          <span>P ${Math.round(c.pendingEstimate.protein)}g</span>
+          <span>G ${Math.round(c.pendingEstimate.carbs)}g</span>
+          <span>L ${Math.round(c.pendingEstimate.fat)}g</span>
+        </div>
+        <div class="field-row">
+          <button class="btn-primary" data-action="submit-chat">Ajouter au journal</button>
+          <button class="btn-secondary" data-action="fav-chat">★ Favoris</button>
+        </div>
+      </div>` : '';
+    const imgPreview = c.imgData ? `
+      <div class="chat-photo-preview">
+        <img src="${c.imgData}">
+        <button data-action="clear-chat-photo">✕</button>
+      </div>` : '';
+    body = `
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-scroll">
+          ${messagesHtml || `<div class="empty-state">Décris ce que tu manges, envoie une photo (plat ou étiquette), ou les deux. Tu peux discuter pour préciser avant de valider.</div>`}
+          ${loading}
+          ${estimateCard}
+        </div>
+        ${imgPreview}
+        <div class="chat-input-row">
+          <input type="file" accept="image/*" capture="environment" id="chat-photo-input" hidden>
+          <button class="icon-btn" data-action="trigger-chat-photo">📷</button>
+          <input class="field" id="chat-text" placeholder="Écris un message…" value="${esc(c.input)}">
+          <button class="btn-icon-primary" data-action="send-chat">➤</button>
+        </div>
+      </div>`;
+  } else if (a.mode === 'favorites') {
+    body = state.favorites.length === 0
+      ? `<div class="empty-state">Aucun favori pour l'instant. Enregistre un aliment en favori depuis Manuel ou le Chat IA.</div>`
+      : `<div class="entry-list" style="padding:0;">${state.favorites.map(f => `
+          <div class="entry-row">
+            <div data-action="add-favorite" data-id="${f.id}" style="cursor:pointer;flex:1;">
+              <div class="entry-name">${esc(f.name)}</div>
+              <div class="entry-meta">P${Math.round(f.protein)} · G${Math.round(f.carbs)} · L${Math.round(f.fat)}</div>
+            </div>
+            <div class="entry-actions">
+              <span class="entry-cal">${Math.round(f.calories)} kcal</span>
+              <button class="del-btn" data-action="delete-favorite" data-id="${f.id}">✕</button>
+            </div>
+          </div>`).join('')}</div>`;
+  }
+
+  return `<div class="panel-overlay" data-action="close-overlay">
+    <div class="panel" data-stop="1">
+      <div class="panel-head"><h2>Ajouter un aliment</h2><button class="icon-btn" data-action="close-add">✕</button></div>
+      ${tabs}
+      ${a.error ? `<div class="error-banner">${esc(a.error)}</div>` : ''}
+      ${body}
+    </div>
+  </div>`;
+}
+
+function renderSettingsPanel() {
+  const s = state.settings;
+  return `<div class="panel-overlay" data-action="close-overlay">
+    <div class="panel" data-stop="1">
+      <div class="panel-head"><h2>Réglages</h2><button class="icon-btn" data-action="close-settings">✕</button></div>
+      <div class="form-grid">
+        <label class="field-label">Calories (kcal)</label>
+        <input class="field" id="s-cal" type="number" value="${s.calories}">
+        <label class="field-label">Protéines (g)</label>
+        <input class="field" id="s-prot" type="number" value="${s.protein}">
+        <label class="field-label">Glucides (g)</label>
+        <input class="field" id="s-carb" type="number" value="${s.carbs}">
+        <label class="field-label">Lipides (g)</label>
+        <input class="field" id="s-fat" type="number" value="${s.fat}">
+
+        <label class="field-label" style="margin-top:14px;">Clé API Gemini (gratuite)</label>
+        <input class="field" id="s-gemini" type="password" placeholder="AIza..." value="${esc(s.geminiKey)}">
+        <div class="field-help">Récupère-la gratuitement sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></div>
+
+        <label class="field-label" style="margin-top:14px;">URL du webhook Google Sheet</label>
+        <input class="field" id="s-sheet" type="text" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(s.sheetUrl)}">
+        <div class="field-help">Voir README.md pour créer ce webhook (Google Apps Script)</div>
+
+        <button class="btn-primary" data-action="save-settings">Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const root = document.getElementById('root');
+  let html = `
+    <div class="top-bar">
+      <div class="brand">Calo<span>Log</span></div>
+      <button class="icon-btn" data-action="open-settings">⚙</button>
+    </div>
+    <div class="view-switch">
+      <button class="vtab ${state.view==='today'?'active':''}" data-action="set-view" data-view="today">Aujourd'hui</button>
+      <button class="vtab ${state.view==='history'?'active':''}" data-action="set-view" data-view="history">Historique</button>
+    </div>
+    ${state.view === 'today' ? renderToday() : renderHistory()}
+  `;
+  if (state.modal === 'add') html += renderAddPanel();
+  if (state.modal === 'settings') html += renderSettingsPanel();
+  root.innerHTML = html;
+  bindEvents();
+}
+
+// ---------- events ----------
+function bindEvents() {
+  const root = document.getElementById('root');
+
+  root.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      if (el.dataset.stop) return;
+      const action = el.dataset.action;
+      if (action === 'set-view') { state.view = el.dataset.view; render(); }
+      else if (action === 'prev-day') shiftDay(-1);
+      else if (action === 'next-day') shiftDay(1);
+      else if (action === 'delete') removeEntry(el.dataset.id);
+      else if (action === 'open-add') { resetAddState(); state.modal = 'add'; render(); }
+      else if (action === 'close-add' || action === 'close-overlay') { if (e.target === el || action==='close-add') { state.modal = null; render(); } }
+      else if (action === 'open-settings') { state.modal = 'settings'; render(); }
+      else if (action === 'close-settings') { state.modal = null; render(); }
+      else if (action === 'set-mode') { state.add.mode = el.dataset.mode; state.add.error=''; render(); }
+      else if (action === 'submit-manual') submitManual();
+      else if (action === 'save-settings') saveSettingsFromForm();
+      else if (action === 'add-favorite') addEntryFromFavorite(el.dataset.id);
+      else if (action === 'delete-favorite') removeFavorite(el.dataset.id);
+      else if (action === 'trigger-chat-photo') { document.getElementById('chat-photo-input').click(); }
+      else if (action === 'clear-chat-photo') { state.add.chat.imgB64=null; state.add.chat.imgData=null; state.add.chat.mediaType=null; render(); }
+      else if (action === 'send-chat') await sendChatMessage();
+      else if (action === 'submit-chat') submitChatEstimate();
+      else if (action === 'fav-chat') { if (state.add.chat.pendingEstimate) { addFavorite(state.add.chat.pendingEstimate); render(); } }
+    });
+  });
+
+  const panelEl = root.querySelector('.panel');
+  if (panelEl) panelEl.addEventListener('click', e => e.stopPropagation());
+
+  const chatPhotoInput = document.getElementById('chat-photo-input');
+  if (chatPhotoInput) chatPhotoInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    state.add.chat.imgB64 = b64;
+    state.add.chat.mediaType = file.type;
+    state.add.chat.imgData = `data:${file.type};base64,${b64}`;
+    render();
+  });
+
+  const chatText = document.getElementById('chat-text');
+  if (chatText) {
+    chatText.addEventListener('input', e => { state.add.chat.input = e.target.value; });
+    chatText.addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+  }
+  const chatScroll = document.getElementById('chat-scroll');
+  if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
+
+  const savefavInput = document.getElementById('f-savefav');
+  if (savefavInput) savefavInput.addEventListener('change', e => { state.add.manual.saveFav = e.target.checked; });
+
+  ['f-name','f-cal','f-prot','f-carb','f-fat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => {
+      const map = { 'f-name':'name','f-cal':'calories','f-prot':'protein','f-carb':'carbs','f-fat':'fat' };
+      state.add.manual[map[id]] = e.target.value;
+    });
+  });
+}
+
+async function sendChatMessage() {
+  const c = state.add.chat;
+  const text = c.input.trim();
+  if (!text && !c.imgB64) return;
+  const userMsg = { role: 'user', text, imgB64: c.imgB64, imgData: c.imgData, mediaType: c.mediaType };
+  c.messages.push(userMsg);
+  c.input = ''; c.imgB64 = null; c.imgData = null; c.mediaType = null;
+  c.loading = true; c.error = ''; c.pendingEstimate = null;
+  render();
+  try {
+    const contents = c.messages.map(m => {
+      const parts = [];
+      if (m.imgB64) parts.push({ inline_data: { mime_type: m.mediaType, data: m.imgB64 } });
+      if (m.text) parts.push({ text: m.text });
+      return { role: m.role === 'user' ? 'user' : 'model', parts };
+    });
+    const raw = await callGeminiChat(contents);
+    const { display, estimate } = extractEstimate(raw);
+    c.messages.push({ role: 'model', text: display || '(estimation prête ci-dessous)' });
+    if (estimate) c.pendingEstimate = estimate;
+  } catch (err) {
+    c.error = err.message || 'Erreur, réessaie.';
+  } finally {
+    c.loading = false; render();
+  }
+}
+function submitChatEstimate() {
+  const c = state.add.chat;
+  if (!c.pendingEstimate) return;
+  addEntry({ ...c.pendingEstimate, method: 'chat_ia' });
+}
+function submitManual() {
+  const m = state.add.manual;
+  if (!m.name || !m.calories) { state.add.error = 'Nom et calories requis.'; render(); return; }
+  const entry = { name: m.name, calories: Number(m.calories)||0, protein: Number(m.protein)||0, carbs: Number(m.carbs)||0, fat: Number(m.fat)||0, method: 'manual' };
+  if (m.saveFav) addFavorite(entry);
+  addEntry(entry);
+}
+function addEntryFromFavorite(id) {
+  const f = state.favorites.find(x => x.id === id);
+  if (!f) return;
+  addEntry({ name: f.name, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, method: 'favorite' });
+}
+function saveSettingsFromForm() {
+  state.settings = {
+    calories: Number(document.getElementById('s-cal').value) || DEFAULT_TARGETS.calories,
+    protein: Number(document.getElementById('s-prot').value) || DEFAULT_TARGETS.protein,
+    carbs: Number(document.getElementById('s-carb').value) || DEFAULT_TARGETS.carbs,
+    fat: Number(document.getElementById('s-fat').value) || DEFAULT_TARGETS.fat,
+    geminiKey: document.getElementById('s-gemini').value.trim(),
+    sheetUrl: document.getElementById('s-sheet').value.trim(),
+  };
+  saveSettings(state.settings);
+  state.modal = null;
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
