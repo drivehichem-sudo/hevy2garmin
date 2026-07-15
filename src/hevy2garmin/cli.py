@@ -141,7 +141,9 @@ def cmd_sync_routines(args: argparse.Namespace) -> None:
         cfg = load_config()
         from hevy2garmin.hevy import HevyClient
         hevy = HevyClient(api_key=args.hevy_api_key or cfg.get("hevy_api_key"))
-        for r in hevy.get_routines(page=1, page_size=args.limit or 10).get("routines", []):
+        # Hevy caps /v1/routines at pageSize 10 — larger values return HTTP 400.
+        page_size = min(args.limit or 10, 10)
+        for r in hevy.get_routines(page=1, page_size=page_size).get("routines", []):
             synced = "✓" if db.get_synced_routine(r["id"]) else " "
             n = len(r.get("exercises", []))
             print(f"  [{synced}] {r.get('title', '?')} ({n} exercises)")

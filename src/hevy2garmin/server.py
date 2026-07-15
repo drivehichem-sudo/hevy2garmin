@@ -1301,10 +1301,11 @@ async def routines_page(request: Request):
     fetch_error = None
     try:
         from hevy2garmin.hevy import HevyClient
+        from hevy2garmin.sync import fetch_all_routines
 
         _db = db.get_db()
-        data = HevyClient(api_key=config.get("hevy_api_key")).get_routines(page=1, page_size=100)
-        for r in data.get("routines", []):
+        hevy = HevyClient(api_key=config.get("hevy_api_key"))
+        for r in fetch_all_routines(hevy):
             routines.append({
                 "title": r.get("title") or r.get("name") or "Routine",
                 "exercise_count": len(r.get("exercises", [])),
