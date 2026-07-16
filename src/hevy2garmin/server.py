@@ -1324,12 +1324,13 @@ async def api_routines_sync(request: Request):
 
     form = await request.form()
     schedule_date = (form.get("date") or "").strip() or None
+    force = form.get("force") in ("1", "true", "on")
 
     if not _acquire_sync_lock():
         return HTMLResponse('<div class="toast toast-error">Another sync is already running. Please wait.</div>')
 
     try:
-        result = sync_routines(dry_run=False, schedule_date=schedule_date)
+        result = sync_routines(dry_run=False, schedule_date=schedule_date, force=force)
     except Exception as e:
         return HTMLResponse(f'<div class="toast toast-error">Routine sync failed: {e}</div>')
     finally:

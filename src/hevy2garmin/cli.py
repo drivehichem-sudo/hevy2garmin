@@ -160,6 +160,7 @@ def cmd_sync_routines(args: argparse.Namespace) -> None:
     result = sync_routines(
         dry_run=args.dry_run,
         schedule_date=args.date,
+        force=args.force,
         **overrides,
     )
 
@@ -375,6 +376,7 @@ def main() -> None:
         "sync-routines", help="Sync Hevy routines to Garmin as planned workouts"
     )
     routines_parser.add_argument("--dry-run", action="store_true", help="Build payloads without calling Garmin")
+    routines_parser.add_argument("--force", action="store_true", help="Re-create even routines already synced (deletes & recreates)")
     routines_parser.add_argument("--date", help="Also schedule workouts on this date (YYYY-MM-DD)")
     routines_parser.add_argument("--list", action="store_true", help="List Hevy routines and their sync status")
     routines_parser.add_argument("-n", "--limit", type=int, help="Number of routines to list with --list")

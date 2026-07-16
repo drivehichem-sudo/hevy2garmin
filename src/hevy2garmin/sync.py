@@ -710,6 +710,7 @@ def sync_routines(
     config: dict[str, Any] | None = None,
     dry_run: bool = False,
     schedule_date: str | None = None,
+    force: bool = False,
     **overrides: Any,
 ) -> dict:
     """Sync Hevy routines (templates) to Garmin as planned workouts.
@@ -724,6 +725,9 @@ def sync_routines(
         config: Config dict (loaded from file if None).
         dry_run: Build payloads and log them, but don't call Garmin.
         schedule_date: Optional ``YYYY-MM-DD`` to schedule the workouts.
+        force: Re-create every routine even if already synced and unchanged
+            (deletes the old Garmin workout first). Use after changing how the
+            payload is built — e.g. to pick up newly added rest steps.
         **overrides: Override config values (hevy_api_key, garmin_email, garmin_password).
 
     Returns:
@@ -765,7 +769,7 @@ def sync_routines(
         updated_at = routine.get("updated_at")
 
         existing = store.get_synced_routine(rid)
-        if existing and store.is_routine_synced(rid, updated_at):
+        if not force and existing and store.is_routine_synced(rid, updated_at):
             logger.debug("Skipping routine %s (%s) — already synced", rid, title)
             stats["skipped"] += 1
             continue

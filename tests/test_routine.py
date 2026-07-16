@@ -254,6 +254,23 @@ class TestSyncRoutines:
         assert schedule_mock.call_args[0][1:] == (777, "2026-08-01")
         assert store.get_synced_routine("r1")["scheduled_date"] == "2026-08-01"
 
+    def test_force_recreates_already_synced(self, tmp_path: Path) -> None:
+        routines = [{"id": "r1", "title": "Push", "updated_at": "2026-01-01T00:00:00Z",
+                     "exercises": [{"title": "Bench Press (Barbell)",
+                                    "sets": [{"type": "normal", "reps": 5, "weight_kg": 60}]}]}]
+        store, create_mock, _, patches = self._patched(tmp_path, routines)
+        store.mark_routine_synced("r1", garmin_workout_id="555",
+                                  hevy_updated_at="2026-01-01T00:00:00Z")
+        delete_mock = MagicMock()
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+                patch.object(sync_module, "delete_workout", delete_mock), patches[6]:
+            result = sync_module.sync_routines(force=True)
+        assert result["created"] == 1
+        assert result["skipped"] == 0
+        create_mock.assert_called_once()
+        delete_mock.assert_called_once_with(delete_mock.call_args[0][0], "555")
+        assert store.get_synced_routine("r1")["garmin_workout_id"] == "777"
+
     def test_dry_run_does_not_call_garmin(self, tmp_path: Path) -> None:
         routines = [{"id": "r1", "title": "Push", "updated_at": "2026-01-01T00:00:00Z", "exercises": []}]
         store, create_mock, _, patches = self._patched(tmp_path, routines)

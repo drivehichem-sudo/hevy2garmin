@@ -13,6 +13,9 @@
       Schedule date (optional):
       <input type="date" name="date" style="background:var(--bg-primary); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 8px;">
     </label>
+    <label style="display:flex; gap:6px; align-items:center; color:var(--text-muted); font-size:14px;" title="Re-create even routines already synced">
+      <input type="checkbox" name="force" value="1"> Force re-create
+    </label>
     <span id="routines-spinner" class="htmx-indicator" style="color:var(--text-muted);">Syncing…</span>
   </form>
   <div id="routines-result" style="margin-top:12px;"></div>
