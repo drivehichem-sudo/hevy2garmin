@@ -16,6 +16,8 @@
 
 <p align="center">
   <a href="https://hevy2garmin-demo.gkos.dev"><strong>Try the live demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://hevy-garmin-explainer.vercel.app"><strong>See how it works</strong></a>
 </p>
 
 <p align="center">
@@ -83,17 +85,17 @@ This token lets hevy2garmin set up automatic syncing on your behalf. Open [this 
 
 1. Go to [vercel.com/new](https://vercel.com/new) and sign in with GitHub
 2. Find **hevy2garmin** in your repo list and click **Import**
-3. If you see an **Integrations** section, click **Add** next to **Neon** (this is the free database that stores your sync history). If you don't see it, no problem -- after deploy, go to your project's **Storage** tab and add **Neon Postgres** from there.
-4. **Environment Variables** -- fill in these 4 values:
+3. **Add a database (required).** If you see an **Integrations** or **Storage** section during import, add **Neon Postgres** (it's free). This is where your sync history lives. If you don't see it during import, that's fine: deploy first, then open your project's **Storage** tab, add **Neon Postgres**, and redeploy. A serverless host has a read-only filesystem, so with no database the app can't save anything and shows an "internal server error".
+4. **Environment Variables.** Vercel does not pre-fill these. The form shows an empty field with a placeholder like `EXAMPLE_NAME`. Add each of the four below as its own variable: type the name in **Key**, the value in **Value**, then click **Add More** for the next one.
 
-| Field | What to paste |
+| Key | What to paste |
 |-------|--------------|
 | `HEVY_API_KEY` | The API key from step 1 |
 | `GARMIN_EMAIL` | Your Garmin Connect email |
 | `GARMIN_PASSWORD` | Your Garmin Connect password |
 | `GITHUB_PAT` | The token from step 3 |
 
-5. Click **Deploy** and wait about a minute for it to build.
+5. Click **Deploy** and wait about a minute for it to build. If the deployed page shows an "internal server error", it almost always means the database step was skipped: add **Neon Postgres** from the **Storage** tab, then redeploy.
 
 **Step 6: Connect Garmin**
 
@@ -117,6 +119,13 @@ You're on the dashboard. Click **Sync All Workouts** to backfill your history. T
 > **EU users:** If you see an upload consent error, go to [Garmin Connect Settings](https://connect.garmin.com/modern/settings) > scroll to **Data** > enable **Device Upload**. This is a one-time Garmin GDPR requirement.
 
 To keep future workouts syncing automatically, toggle **Auto-sync** on the dashboard. This creates a background job that syncs new workouts every 2 hours.
+
+> **Sync timing:** hevy2garmin waits `sync.grace_period_minutes` (default 120)
+> after a workout ends before syncing it automatically, so your Garmin watch
+> activity can land first and it merges into one activity instead of creating a
+> duplicate. On Vercel the default cron runs once a day; if your plan allows,
+> lower the cron interval (e.g. every few hours) so recently-finished workouts
+> sync the same day. Manual "Sync now" always ignores the grace period.
 
 **That's it.** Check [Garmin Connect](https://connect.garmin.com/modern/activities) to see your workouts with proper exercise names, sets, reps, and weights.
 
@@ -274,6 +283,20 @@ pip install hevy2garmin[cloud]
 
 This adds `psycopg2-binary` and enables automatic Postgres backend detection via `DATABASE_URL`.
 
+### TypeScript / npm
+
+The same logic is available as a TypeScript package for Node, serverless functions, and Vercel crons, so you can run the sync without a Python runtime.
+
+```bash
+npm install hevy2garmin
+```
+
+```ts
+import { generateFit, HevyClient } from "hevy2garmin";
+```
+
+It lives alongside the Python package in the [`typescript/`](typescript) folder of this repo and is published to npm under the same name. Setup, the full API, and examples are in the [TypeScript README](typescript/README.md). The Python package on PyPI stays fully supported.
+
 ## Getting Your Hevy API Key
 
 > **Hevy Pro is required.** API access is not available on the free plan.
@@ -359,12 +382,12 @@ This is visible in the activity details on Garmin Connect and any connected apps
 
 ## Enhance Watch Activities (opt-in)
 
-By default, hevy2garmin creates a new Garmin activity from your Hevy workout using your watch's continuous HR monitoring (~2 min sampling). This works without any behavior change.
+By default, hevy2garmin creates a new Garmin activity from your Hevy workout using your watch's daily HR monitoring (~2 min sampling). This works without any behavior change. When a matching watch-recorded workout is found and the **Replace** strategy is selected, hevy2garmin instead downloads that activity's high-resolution HR, saves a durable backup, embeds it in the named Hevy FIT, uploads the replacement, and only then deletes the watch copy. If neither the original FIT nor an existing backup is available, replacement stops and preserves the watch activity.
 
-If you start a **Strength Training** activity on your Garmin watch when you hit the gym, you can enable **Enhance Watch Activities** in the config (`"merge_mode": true`). hevy2garmin will detect the matching watch activity and push your Hevy exercise data directly into it instead of creating a new activity. Benefits:
+If you start a **Strength Training** activity on your Garmin watch when you hit the gym, you can enable **Enhance Watch Activities** in the config (`"merge_mode": true`). hevy2garmin detects the matching watch activity and combines it with your Hevy data using the configured watch strategy. The in-place strategies keep the original watch activity; Replace creates one named composite activity. Depending on the selected strategy, benefits include:
 
 - **1-second HR sampling** (vs ~2 min in continuous monitoring)
-- **Training effect, EPOC, recovery time, and VO2max impact** all count (Garmin ignores these for manually uploaded activities)
+- **Training effect, EPOC, recovery time, and VO2max impact** remain when an in-place strategy keeps the original activity (Garmin does not transfer these to an uploaded replacement)
 - **Correct Strava timestamps** (watch-synced activities use the real time, not upload time)
 - **Single activity** on Garmin (no duplicate)
 

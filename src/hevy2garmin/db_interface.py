@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
+
+
+class NoWritableDatabaseError(RuntimeError):
+    """No Postgres URL is set and the local SQLite fallback cannot be written.
+
+    Happens on serverless deploys (Vercel/Lambda) where the home filesystem is
+    read-only and no database has been attached. Handlers catch this to show an
+    actionable "add a database" message instead of a raw 500 (#145, #142).
+    """
 
 
 class Database(ABC):
@@ -78,3 +88,80 @@ class Database(ABC):
     @abstractmethod
     def set_app_config(self, key: str, value: dict) -> None:
         """Store a JSON value in the generic key-value app cache."""
+
+    @abstractmethod
+    def claim_pending(self, hevy_id: str, payload: dict[str, Any]) -> bool:
+        """Atomically claim submission authority for a workout."""
+
+    @abstractmethod
+    def get_pending(self, hevy_id: str) -> dict | None:
+        """Return one unfinished upload operation."""
+
+    @abstractmethod
+    def list_pending(self) -> list[dict]:
+        """Return unfinished upload operations, newest first."""
+
+    @abstractmethod
+    def update_pending(self, hevy_id: str, **changes: Any) -> None:
+        """Persist selected pending-operation fields."""
+
+    @abstractmethod
+    def delete_pending(self, hevy_id: str) -> bool:
+        """Abandon an unfinished operation."""
+
+    @abstractmethod
+    def complete_pending(self, hevy_id: str, terminal: dict[str, Any]) -> None:
+        """Atomically upsert terminal state and remove pending state."""
+
+    @abstractmethod
+    def resolve_terminal(
+        self,
+        hevy_id: str,
+        *,
+        status: str,
+        garmin_activity_id: str | None = None,
+        reason: str | None = None,
+        source: str | None = None,
+    ) -> None:
+        """Atomically create a manual/skipped terminal state and clear pending."""
+
+    @abstractmethod
+    def get_workout_states(self, hevy_ids: list[str]) -> dict[str, dict]:
+        """Batch-fetch terminal and pending state with terminal precedence."""
+
+    @abstractmethod
+    def get_terminal_counts(self) -> dict[str, int]:
+        """Return uploaded, manual, skipped, and total terminal counts."""
+
+    # ── Routine → Garmin planned-workout tracking ───────────────────────────
+    @abstractmethod
+    def get_synced_routine(self, hevy_routine_id: str) -> dict | None:
+        """Return the sync record for a Hevy routine, or None if never synced."""
+
+    @abstractmethod
+    def is_routine_synced(self, hevy_routine_id: str, hevy_updated_at: str | None = None) -> bool:
+        """True if the routine was synced and (if given) not edited on Hevy since."""
+
+    @abstractmethod
+    def mark_routine_synced(
+        self,
+        hevy_routine_id: str,
+        garmin_workout_id: str | None = None,
+        title: str = "",
+        hevy_updated_at: str | None = None,
+        scheduled_date: str | None = None,
+        content_hash: str | None = None,
+    ) -> None:
+        """Record a routine synced to a Garmin planned workout."""
+
+    @abstractmethod
+    def delete_synced_routine(self, hevy_routine_id: str) -> bool:
+        """Remove a routine sync record. Returns True if a record was deleted."""
+
+    @abstractmethod
+    def get_routine_stats(self) -> dict:
+        """Return routine sync counts: ``{"synced": int, "scheduled": int}``."""
+
+    @abstractmethod
+    def get_recent_synced_routines(self, limit: int = 5) -> list[dict]:
+        """Return recently synced routines, newest first."""
